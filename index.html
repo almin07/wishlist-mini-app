@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Вишлист</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>🎁 Мой Вишлист</h1>
+            <div class="header-actions">
+                <button id="notificationBtn" class="btn-icon">🔔</button>
+                <button id="settingsBtn" class="btn-icon">⚙️</button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="my-wishes">Мой список</button>
+            <button class="tab-btn" data-tab="friends">Друзья</button>
+            <button class="tab-btn" data-tab="invitations">Приглашения</button>
+        </nav>
+
+        <main class="content">
+            <section id="my-wishes" class="tab-content active">
+                <div class="section-header">
+                    <h2>Мой вишлист</h2>
+                    <button id="addWishBtn" class="btn btn-primary">+ Добавить желание</button>
+                </div>
+                <div id="myWishesList" class="wishes-list"></div>
+            </section>
+
+            <section id="friends" class="tab-content">
+                <div class="section-header">
+                    <h2>Друзья</h2>
+                    <button id="addFriendBtn" class="btn btn-primary">+ Пригласить друга</button>
+                </div>
+                <div id="friendsList" class="friends-list"></div>
+            </section>
+
+            <section id="invitations" class="tab-content">
+                <h2>Входящие приглашения</h2>
+                <div id="invitationsList" class="invitations-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="loader" class="loader hidden">
+        <div class="spinner"></div>
+        <p>Загрузка...</p>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

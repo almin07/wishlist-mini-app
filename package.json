@@ -1,0 +1,13 @@
+{
+  "name": "wishlist-mini-app",
+  "version": "1.0.0",
+  "description": "Telegram Mini App for managing wishlists",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "build": "echo 'No build needed for static site'"
+  },
+  "keywords": ["telegram", "mini-app", "wishlist"],
+  "author": "",
+  "license": "MIT"
+}
