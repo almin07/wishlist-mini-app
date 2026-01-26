@@ -1,5 +1,5 @@
 // ГЛАВНЫЕ ПЕРЕМЕННЫЕ
-const API_BASE_URL = 'https://your-backend-url.vercel.app/api';
+const API_BASE_URL = 'https://wishlist-backend-mu.vercel.app'; // ✅ Vercel backend;
 let currentUser = null;
 let authToken = null;
 
