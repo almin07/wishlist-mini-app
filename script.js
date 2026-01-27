@@ -1,5 +1,6 @@
 // ============================================
 // WISHLIST MINI APP - TELEGRAM & BROWSER
+// FIXED VERSION v1.1
 // ============================================
 
 // API Configuration
@@ -92,7 +93,7 @@ async function loadWishes() {
       console.log(`✅ Loaded ${appState.wishes.length} wishes`);
     } else {
       console.warn('⚠️ No wishes returned from API');
-      appState.wishes = [];
+      appState.wishes = getDemoWishes();
     }
   } catch (error) {
     console.error('❌ Error loading wishes:', error);
@@ -204,11 +205,14 @@ function showDemoNotice() {
 function setupEventHandlers() {
   console.log('🔧 Setting up event handlers...');
 
-  // Tab switching
+  // Tab switching - FIXED
   const tabButtons = document.querySelectorAll('.tab-btn');
+  console.log(`Found ${tabButtons.length} tab buttons`);
+  
   tabButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const tabName = e.target.dataset.tab;
+      e.preventDefault();
+      const tabName = btn.dataset.tab;
       console.log(`📑 Switching to ${tabName} tab`);
       switchTab(tabName);
     });
@@ -227,7 +231,8 @@ function setupEventHandlers() {
   const deleteWishBtns = document.querySelectorAll('.delete-wish-btn');
   deleteWishBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const wishId = e.target.dataset.wishId;
+      e.preventDefault();
+      const wishId = btn.dataset.wishId;
       console.log(`🗑️ Delete wish ${wishId} clicked`);
       deleteWish(wishId);
     });
@@ -237,7 +242,8 @@ function setupEventHandlers() {
   const giftBtns = document.querySelectorAll('.gift-btn');
   giftBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const wishId = e.target.dataset.wishId;
+      e.preventDefault();
+      const wishId = btn.dataset.wishId;
       console.log(`🎁 Gift button for wish ${wishId} clicked`);
       markAsGift(wishId);
     });
@@ -267,23 +273,38 @@ function setupEventHandlers() {
 }
 
 // ============================================
-// TAB MANAGEMENT
+// TAB MANAGEMENT - FIXED
 // ============================================
 
 function switchTab(tabName) {
+  console.log(`🔄 Switching tab to: ${tabName}`);
   appState.currentTab = tabName;
 
   // Update buttons
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
+    if (btn.dataset.tab === tabName) {
+      btn.classList.add('active');
+      console.log(`✅ Marked button ${tabName} as active`);
+    } else {
+      btn.classList.remove('active');
+    }
   });
-  document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
-  // Update content
+  // Update content - SHOW THE RIGHT TAB
   document.querySelectorAll('.tab-content').forEach(content => {
     content.classList.remove('active');
   });
 
+  // Show the active tab
+  const activeContent = document.querySelector(`[data-tab="${tabName}"]`);
+  if (activeContent) {
+    activeContent.classList.add('active');
+    console.log(`✅ Showed ${tabName} content`);
+  } else {
+    console.warn(`⚠️ Could not find content for tab: ${tabName}`);
+  }
+
+  // Render content
   switch (tabName) {
     case 'wishes':
       renderWishesTab();
@@ -294,6 +315,8 @@ function switchTab(tabName) {
     case 'settings':
       renderSettingsTab();
       break;
+    default:
+      console.warn(`Unknown tab: ${tabName}`);
   }
 }
 
@@ -302,8 +325,14 @@ function switchTab(tabName) {
 // ============================================
 
 function renderWishesTab() {
+  console.log('📋 Rendering wishes tab...');
   const content = document.getElementById('wishesContent');
   
+  if (!content) {
+    console.error('❌ wishesContent element not found!');
+    return;
+  }
+
   if (!appState.wishes || appState.wishes.length === 0) {
     content.innerHTML = `
       <div class="empty-state">
@@ -311,6 +340,7 @@ function renderWishesTab() {
         <p class="small-text">Нажмите кнопку ниже, чтобы добавить первое желание</p>
       </div>
     `;
+    console.log('✅ Rendered empty state');
     return;
   }
 
@@ -334,6 +364,8 @@ function renderWishesTab() {
     </div>
   `).join('');
 
+  console.log(`✅ Rendered ${appState.wishes.length} wishes`);
+
   // Re-attach event listeners
   setupEventHandlers();
 }
@@ -343,8 +375,14 @@ function renderWishesTab() {
 // ============================================
 
 function renderNotificationsTab() {
+  console.log('📬 Rendering notifications tab...');
   const content = document.getElementById('notificationsContent');
   
+  if (!content) {
+    console.error('❌ notificationsContent element not found!');
+    return;
+  }
+
   if (!appState.notifications || appState.notifications.length === 0) {
     content.innerHTML = `
       <div class="empty-state">
@@ -352,6 +390,7 @@ function renderNotificationsTab() {
         <p class="small-text">Здесь появятся уведомления от друзей</p>
       </div>
     `;
+    console.log('✅ Rendered empty notifications state');
     return;
   }
 
@@ -362,12 +401,14 @@ function renderNotificationsTab() {
     return `
       <div class="notification-card">
         <div class="notification-content">
-          <p>${notif.message}</p>
+          <p>${escapeHtml(notif.message)}</p>
           <span class="notification-time">${timeAgo}</span>
         </div>
       </div>
     `;
   }).join('');
+
+  console.log(`✅ Rendered ${appState.notifications.length} notifications`);
 }
 
 // ============================================
@@ -375,8 +416,14 @@ function renderNotificationsTab() {
 // ============================================
 
 function renderSettingsTab() {
+  console.log('⚙️ Rendering settings tab...');
   const content = document.getElementById('settingsContent');
   
+  if (!content) {
+    console.error('❌ settingsContent element not found!');
+    return;
+  }
+
   content.innerHTML = `
     <div class="settings-group">
       <h3>🔔 Уведомления</h3>
@@ -406,10 +453,12 @@ function renderSettingsTab() {
 
     <div class="settings-group">
       <h3>ℹ️ О приложении</h3>
-      <p class="small-text">Wishlist Mini App v1.0</p>
+      <p class="small-text">Wishlist Mini App v1.1</p>
       <p class="small-text">Управляйте списком желаний со своими друзьями</p>
     </div>
   `;
+
+  console.log('✅ Rendered settings');
 
   // Re-attach event listeners
   setupEventHandlers();
@@ -488,4 +537,4 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
-console.log('📦 Script loaded successfully');
+console.log('📦 Script loaded successfully - v1.1');
