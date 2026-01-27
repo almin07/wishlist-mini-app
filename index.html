@@ -3,57 +3,446 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой Вишлист</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="theme-color" content="#1f2121">
+    <title>Wishlist Mini App</title>
+    <script src="https://web.telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #208a8a;
+            --primary-dark: #166b6b;
+            --primary-light: #2aa9a9;
+            --bg-primary: #f8f8f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #1f2121;
+            --text-secondary: #666666;
+            --border-color: #e0e0e0;
+            --danger-color: #ff3b30;
+            --success-color: #34c759;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0f1419;
+                --bg-secondary: #1a1f2e;
+                --text-primary: #ffffff;
+                --text-secondary: #a0a0a0;
+                --border-color: #333333;
+            }
+        }
+
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 60px;
+        }
+
+        .demo-notice {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 12px 16px;
+            font-size: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ffc107;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .demo-notice p {
+            margin: 0;
+        }
+
+        .demo-notice strong {
+            font-weight: 600;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--text-primary);
+            color: #ffffff;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* Main Content */
+        .container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 16px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            margin: 8px 0;
+        }
+
+        .empty-state p:first-child {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        .small-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Wish Card */
+        .wish-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .wish-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .wish-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .wish-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .delete-wish-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 0;
+            margin-left: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .delete-wish-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .wish-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 8px 0 0 0;
+            line-height: 1.4;
+        }
+
+        .wish-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .wish-price {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--success-color);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .btn-primary:active {
+            background-color: var(--primary-dark);
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:active {
+            background-color: var(--border-color);
+        }
+
+        .gift-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--primary-color);
+            background-color: transparent;
+            color: var(--primary-color);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .gift-btn:active {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        /* Notification Card */
+        .notification-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .notification-content p {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+            line-height: 1.4;
+        }
+
+        .notification-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Settings */
+        .settings-group {
+            margin-bottom: 24px;
+        }
+
+        .settings-group h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: var(--text-primary);
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-item label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .setting-item label span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .setting-item input[type="checkbox"] {
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        /* Footer Navigation */
+        .nav-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 56px;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+        }
+
+        .tab-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tab-icon {
+            font-size: 24px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding-bottom: 10px;
+            }
+
+            .wish-card {
+                margin-bottom: 10px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <header class="header">
-            <h1>🎁 Мой Вишлист</h1>
-            <div class="header-actions">
-                <button id="notificationBtn" class="btn-icon">🔔</button>
-                <button id="settingsBtn" class="btn-icon">⚙️</button>
+    <!-- Header -->
+    <div class="header">
+        <h1>📋 Wishlist</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Wishes Tab -->
+        <div id="wishesContent" class="tab-content active">
+            <div class="empty-state">
+                <p>📝 Загрузка...</p>
             </div>
-        </header>
+        </div>
 
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="my-wishes">Мой список</button>
-            <button class="tab-btn" data-tab="friends">Друзья</button>
-            <button class="tab-btn" data-tab="invitations">Приглашения</button>
-        </nav>
+        <!-- Notifications Tab -->
+        <div id="notificationsContent" class="tab-content">
+            <div class="empty-state">
+                <p>🔔 Загрузка...</p>
+            </div>
+        </div>
 
-        <main class="content">
-            <section id="my-wishes" class="tab-content active">
-                <div class="section-header">
-                    <h2>Мой вишлист</h2>
-                    <button id="addWishBtn" class="btn btn-primary">+ Добавить желание</button>
-                </div>
-                <div id="myWishesList" class="wishes-list"></div>
-            </section>
-
-            <section id="friends" class="tab-content">
-                <div class="section-header">
-                    <h2>Друзья</h2>
-                    <button id="addFriendBtn" class="btn btn-primary">+ Пригласить друга</button>
-                </div>
-                <div id="friendsList" class="friends-list"></div>
-            </section>
-
-            <section id="invitations" class="tab-content">
-                <h2>Входящие приглашения</h2>
-                <div id="invitationsList" class="invitations-list"></div>
-            </section>
-        </main>
+        <!-- Settings Tab -->
+        <div id="settingsContent" class="tab-content">
+            <div class="empty-state">
+                <p>⚙️ Загрузка...</p>
+            </div>
+        </div>
     </div>
 
-    <div id="loader" class="loader hidden">
-        <div class="spinner"></div>
-        <p>Загрузка...</p>
+    <!-- Bottom Navigation -->
+    <div class="nav-bottom">
+        <button class="tab-btn active" data-tab="wishes" title="Желания">
+            <span class="tab-icon">📋</span>
+            <span>Желания</span>
+        </button>
+        <button class="tab-btn" data-tab="notifications" title="Уведомления">
+            <span class="tab-icon">🔔</span>
+            <span>Уведомления</span>
+        </button>
+        <button class="tab-btn" data-tab="settings" title="Настройки">
+            <span class="tab-icon">⚙️</span>
+            <span>Настройки</span>
+        </button>
     </div>
 
-    <div id="toastContainer" class="toast-container"></div>
-
+    <!-- Script -->
     <script src="script.js"></script>
 </body>
 </html>
