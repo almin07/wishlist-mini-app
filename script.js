@@ -505,7 +505,32 @@ function renderSettingsTab() {
 // ============================================
 
 async function showAddWishForm(editWish = null) {
-  const title
+  const title = prompt(editWish ? `Редактировать "${editWish.title}":` : 'Название желания:');
+  if (!title) return;
+
+  const description = prompt('Описание (опционально):') || null;
+  const priceStr = prompt('Цена (опционально):') || null;
+  const price = priceStr ? parseFloat(priceStr) : null;
+  const category = prompt('Категория (опционально):') || null;
+
+  const wishData = {
+    title,
+    description,
+    price,
+    category
+  };
+
+  try {
+    if (editWish) {
+      await updateWish(editWish.id, wishData);  // Ваша функция обновления
+    } else {
+      await addWish(wishData);  // Ваша функция добавления
+    }
+    loadWishes();  // Перезагрузка списка
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
 
 function deleteWish(wishId) {
   if (!confirm('Вы уверены?')) return;
