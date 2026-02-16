@@ -506,6 +506,9 @@ function renderSettingsTab() {
 
 async function showAddWishForm(editWish = null) {
   const title = prompt(editWish ? `Редактировать "${editWish.title}":` : 'Название желания:');
+  if (!title) return;
+
+  const description
 
 function deleteWish(wishId) {
   if (!confirm('Вы уверены?')) return;
