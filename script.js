@@ -504,19 +504,8 @@ function renderSettingsTab() {
 // ACTIONS
 // ============================================
 
-function showAddWishForm() {
-  const title = prompt('Введите название желания:');
-  if (!title) return;
-
-  const description = prompt('Описание (опционально):');
-  const priceStr = prompt('Цена (опционально):');
-  const price = priceStr ? parseFloat(priceStr) : null;
-
-  // Here you would call API to create wish
-  // For now, show confirmation
-  alert(`✅ Желание "${title}" будет добавлено на сервер`);
-  console.log('➕ Create wish:', { title, description, price });
-}
+async function showAddWishForm(editWish = null) {
+  const title = prompt(editWish ? `Редактировать "${editWish.title}":` : 'Название желания:');
 
 function deleteWish(wishId) {
   if (!confirm('Вы уверены?')) return;
