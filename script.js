@@ -508,7 +508,8 @@ async function showAddWishForm(editWish = null) {
   const title = prompt(editWish ? `Редактировать "${editWish.title}":` : 'Название желания:');
   if (!title) return;
 
-  const description
+  const description = prompt('Описание (опционально):') || null;
+  const priceStr
 
 function deleteWish(wishId) {
   if (!confirm('Вы уверены?')) return;
