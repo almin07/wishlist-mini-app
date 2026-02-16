@@ -190,12 +190,25 @@ function getDemoNotifications() {
 }
 
 function showDemoNotice() {
-  const notice = document.createElement('div');
-  notice.className = 'demo-notice';
-  notice.innerHTML = `
-    <p>🌐 <strong>Demo Mode</strong> — Используются тестовые данные. Откройте в Telegram для полной функциональности.</p>
-  `;
-  document.body.insertBefore(notice, document.body.firstChild);
+  // Demo mode отключен для production
+  console.log('✅ Production mode enabled');
+  // Баннер больше не показывается
+}
+
+function deleteWish(wishId) {
+  if (!confirm(`Удалить желание "${appState.wishes.find(w => w.id == wishId)?.title}"?`)) return;
+  
+  console.log('🗑️ Удаляем wish:', wishId);
+  
+  // TODO: Реальная API функция
+  alert('✅ Желание удалено (demo)');
+}
+
+function markAsGift(wishId) {
+  console.log('🎁 Отмечаем как подарок:', wishId);
+  
+  // TODO: Реальная API функция
+  alert('🎁 Вы отметили "Я подарю!" (demo)');
 }
 
 // ============================================
@@ -248,6 +261,29 @@ function setupEventHandlers() {
       markAsGift(wishId);
     });
   });
+
+  function showWishDetails(wishId) {
+  const wish = appState.wishes.find(w => w.id == wishId);
+  if (!wish) return;
+
+  const modal = document.createElement('div');
+  modal.className = 'wish-modal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="this.parentElement.remove()">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <h2>${escapeHtml(wish.title)}</h2>
+        ${wish.description ? `<p>${escapeHtml(wish.description)}</p>` : ''}
+        ${wish.price ? `<p class="price">💰 ${wish.price} ₽</p>` : ''}
+        ${wish.link ? `<a href="${wish.link}" target="_blank" class="btn">🔗 Перейти</a>` : ''}
+        <div class="modal-actions">
+          <button class="btn btn-primary" onclick="markAsGift(${wish.id})">🎁 Я подарю!</button>
+          <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 
   // Settings toggles
   const notificationsToggle = document.getElementById('notificationsToggle');
