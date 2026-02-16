@@ -387,6 +387,16 @@
   left: 0;
   right
   
+  /* Add Wish Button */
+.add-wish-container {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#addWishBtn {
+  width
+  
         /* Responsive */
         @media (max-width: 480px) {
             .container {
@@ -411,6 +421,12 @@
 
     <!-- Main Content -->
     <div class="container">
+        <!-- Add Wish Button -->
+<div class="add-wish-container">
+  <button id="addWishBtn" class="btn btn-primary">
+    ➕ Добавить желание
+  </button>
+</div>
         <!-- Wishes Tab -->
         <div id="wishesContent" class="tab-content active" data-tab="wishes">
             <div class="empty-state">
