@@ -1,191 +1,95 @@
-// WISHLIST MINI APP - TELEGRAM BROWSER FIXED VERSION v1.2 (FIXED LOADING)
-const APIBASE = 'https://wishlist-backend-mu.vercel.app';
-const APIWISHES = `${APIBASE}/api/wishes`;
+console.log('SCRIPT v1.4 LOADED - DEMO MODE');
 
-let appState = {
-    userId: null,
-    wishes: [],
-    notifications: [],
-    settings: {
-        notificationsEnabled: JSON.parse(localStorage.getItem('notificationsEnabled') ?? 'true'),
-        birthdayNotifications: JSON.parse(localStorage.getItem('birthdayNotifications') ?? 'true')
-    },
-    currentTab: 'wishes'
-};
+let wishes = [
+  {id:1, title:'MacBook Pro', description:'16"', price:2500},
+  {id:2, title:'iPhone 16', price:2000},
+  {id:3, title:'Курс Next.js', price:300},
+  {id:4, title:'iPad Pro', price:1500}
+];
 
-// Показать/скрыть loader
-function showLoader(show = true) {
-    const loader = document.querySelector('.loader');
-    if (loader) loader.classList.toggle('hidden', !show);
+let userId = 647859651; // Ваш Telegram ID
+
+// Escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
-// Toast
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+// Render wishes
+function renderWishes() {
+  const content = document.getElementById('wishesContent') || document.querySelector('.container');
+  if (!content) return console.error('No content!');
+  
+  content.innerHTML = wishes.map(w => `
+    <div class="wish-card" style="padding:16px; border:1px solid #ccc; margin:10px 0; border-radius:8px;">
+      <div style="display:flex; justify-content:space-between;">
+        <h3 style="margin:0;">${escapeHtml(w.title)}</h3>
+        <button onclick="deleteWish(${w.id})" style="background:red; color:white; border:none; border-radius:4px; padding:4px 8px;">×</button>
+      </div>
+      ${w.description ? `<p style="color:#666;">${escapeHtml(w.description)}</p>` : ''}
+      ${w.price ? `<p style="font-weight:bold; color:green;">${w.price}₽</p>` : ''}
+      <button onclick="giftWish(${w.id})" style="background:#4CAF50; color:white; border:none; border-radius:4px; padding:8px;">Подарить</button>
+    </div>
+  `).join('');
+  console.log('Rendered', wishes.length);
 }
 
-// TELEGRAM INITIALIZATION
-async function initializeApp() {
-    showLoader(true);
-    try {
-        console.log('Initializing Wishlist Mini App...');
-        
-        // Telegram check
-        if (window.Telegram?.WebApp) {
-            console.log('Telegram environment detected...');
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            tg.setHeaderColor('#1f2121');
-            
-            const initDataUnsafe = tg.initDataUnsafe;
-            if (initDataUnsafe?.user?.id) {
-                appState.userId = initDataUnsafe.user.id;
-                console.log('User ID from Telegram:', appState.userId);
-            } else {
-                appState.userId = 123456; // demo
-            }
-        } else {
-            console.log('Browser mode - demo data');
-            appState.userId = parseInt(localStorage.getItem('userId') || '123456');
-        }
-        
-        // Load data
-        await loadWishes();
-        await loadNotifications();
-        setupEventHandlers();
-        renderWishesTab();
-        
-        showLoader(false);
-        console.log('App initialized successfully');
-    } catch (error) {
-        console.error('Initialization error:', error);
-        showLoader(false);
-        appState.wishes = getDemoWishes();
-        appState.notifications = getDemoNotifications();
-        renderWishesTab();
-        setupEventHandlers();
-        showToast('Загружено в демо-режиме', 'error');
-    }
+// Delete
+function deleteWish(id) {
+  if (confirm('Удалить?')) {
+    wishes = wishes.filter(w => w.id !== id);
+    renderWishes();
+  }
 }
 
-// API CALLS
-async function loadWishes() {
-    try {
-        const response = await fetch(`${APIWISHES}?userId=${appState.userId}`);
-        const data = await response.json();
-        if (data.success) {
-            appState.wishes = data.wishes;
-        } else {
-            appState.wishes = getDemoWishes();
-        }
-    } catch (error) {
-        console.error('Load wishes error:', error);
-        appState.wishes = getDemoWishes();
-    }
+// Gift
+function giftWish(id) {
+  const wish = wishes.find(w => w.id === id);
+  if (wish) {
+    wish.gifted = true;
+    renderWishes();
+    alert(`🎁 "${wish.title}" подарено!`);
+  }
 }
 
-async function loadNotifications() {
-    try {
-        const response = await fetch(`${APIBASE}/api/notifications?userId=${appState.userId}`);
-        const data = await response.json();
-        if (data.success) {
-            appState.notifications = data.notifications;
-        } else {
-            appState.notifications = getDemoNotifications();
-        }
-    } catch (error) {
-        console.error('Load notifications error:', error);
-        appState.notifications = getDemoNotifications();
-    }
+// Add wish
+function addWish() {
+  const title = prompt('Название желания:');
+  if (!title) return;
+  const desc = prompt('Описание:') || '';
+  const price = prompt('Цена:') || 0;
+  
+  wishes.unshift({
+    id: Date.now(),
+    title,
+    description: desc,
+    price: parseInt(price) || 0
+  });
+  renderWishes();
 }
 
-// DEMO DATA
-function getDemoWishes() {
-    return [
-        { id: 1, userid: appState.userId, title: 'MacBook', description: 'MacBook Pro 16"', price: 2500, status: 'active' },
-        { id: 2, userid: appState.userId, title: 'iPhone 16', price: 2000, status: 'active' },
-        { id: 3, userid: appState.userId, title: 'Курс Next.js', description: 'Next.js + TypeScript', price: 300, status: 'active' }
-    ];
+// Event handlers
+document.addEventListener('click', e => {
+  if (e.target.id === 'addWishBtn') addWish();
+  if (e.target.dataset.tab) {
+    // Tab switch
+    document.querySelectorAll('[data-tab]').forEach(tab => tab.classList.remove('active'));
+    e.target.classList.add('active');
+  }
+});
+
+// Telegram
+if (window.Telegram?.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+  console.log('Telegram ready');
 }
 
-function getDemoNotifications() {
-    return [
-        { id: 1, type: 'friendrequest', message: '@friend добавил вас в друзья', createdat: new Date(Date.now() - 3600000).toISOString() },
-        { id: 2, type: 'giftselected', message: '@friend выбрал ваше желание "MacBook"', createdat: new Date(Date.now() - 7200000).toISOString() }
-    ];
-}
-
-// ... (остальной код renderWishesTab, switchTab, setupEventHandlers, showAddWishForm из предыдущего ответа остается)
-
-function renderWishesTab() {
-    const content = document.getElementById('wishesContent');
-    if (!content) return console.error('#wishesContent not found!');
-    
-    if (appState.wishes.length === 0) {
-        content.innerHTML = `
-            <div class="empty-state">
-                <p>✨</p>
-                <p>Пока нет желаний</p>
-                <p class="small-text">Нажмите "+" чтобы добавить</p>
-            </div>
-        `;
-        return;
-    }
-    
-    content.innerHTML = appState.wishes.map(wish => `
-        <div class="wish-card">
-            <div class="wish-header">
-                <h3>${escapeHtml(wish.title)}</h3>
-                <button class="delete-wish-btn" data-wish-id="${wish.id}" title="Удалить">×</button>
-            </div>
-            ${wish.description ? `<p class="wish-description">${escapeHtml(wish.description)}</p>` : ''}
-            <div class="wish-footer">
-                ${wish.price ? `<span class="wish-price">${wish.price}₽</span>` : ''}
-                <button class="gift-btn" data-wish-id="${wish.id}">Подарить</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// showAddWishForm из предыдущего ответа (с fetch)
-async function showAddWishForm(editWish = null) {
-    const title = prompt(editWish ? `Редактировать "${editWish.title}"` : 'Название желания:');
-    if (!title) return;
-    
-    const description = prompt('Описание (опционально):') || null;
-    const priceStr = prompt('Цена (опционально):') || null;
-    const price = priceStr ? parseFloat(priceStr) : null;
-    
-    const wishData = { title, description, price, userId: appState.userId };
-    
-    try {
-        const response = await fetch(`${APIBASE}/api/wishes`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(wishData)
-        });
-        if (response.ok) {
-            await loadWishes();
-            renderWishesTab();
-            showToast('Желание добавлено! ✅');
-        } else throw new Error();
-    } catch {
-        // Fallback demo
-        const newWish = { ...wishData, id: Date.now(), status: 'active' };
-        appState.wishes.unshift(newWish);
-        renderWishesTab();
-        showToast('Добавлено локально');
-    }
-}
-
-// Запуск
+// Start
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
+  document.addEventListener('DOMContentLoaded', renderWishes);
 } else {
-    initializeApp();
+  renderWishes();
 }
+console.log('READY');
