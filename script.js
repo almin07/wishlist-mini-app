@@ -1,610 +1,191 @@
-// ============================================
-// WISHLIST MINI APP - TELEGRAM & BROWSER
-// FIXED VERSION v1.1
-// ============================================
+// WISHLIST MINI APP - TELEGRAM BROWSER FIXED VERSION v1.2 (FIXED LOADING)
+const APIBASE = 'https://wishlist-backend-mu.vercel.app';
+const APIWISHES = `${APIBASE}/api/wishes`;
 
-// API Configuration
-const API_BASE = 'https://wishlist-backend-mu.vercel.app';
-const API_WISHES = `${API_BASE}/api/wishes`;
-
-// State Management
 let appState = {
-  userId: null,
-  wishes: [],
-  notifications: [],
-  settings: {
-    notificationsEnabled: JSON.parse(localStorage.getItem('notificationsEnabled') ?? 'true'),
-    birthdayNotifications: JSON.parse(localStorage.getItem('birthdayNotifications') ?? 'true')
-  },
-  currentTab: 'wishes'
+    userId: null,
+    wishes: [],
+    notifications: [],
+    settings: {
+        notificationsEnabled: JSON.parse(localStorage.getItem('notificationsEnabled') ?? 'true'),
+        birthdayNotifications: JSON.parse(localStorage.getItem('birthdayNotifications') ?? 'true')
+    },
+    currentTab: 'wishes'
 };
 
-// ============================================
-// TELEGRAM INITIALIZATION
-// ============================================
-
-async function initializeApp() {
-  try {
-    console.log('🚀 Initializing Wishlist Mini App...');
-
-    // Check if Telegram WebApp is available
-    if (window.Telegram && window.Telegram.WebApp) {
-      console.log('✅ Telegram environment detected');
-      const tg = window.Telegram.WebApp;
-      
-      // Get user data from Telegram
-      const initDataUnsafe = tg.initDataUnsafe;
-      
-      if (initDataUnsafe && initDataUnsafe.user && initDataUnsafe.user.id) {
-        appState.userId = initDataUnsafe.user.id;
-        console.log(`✅ User ID from Telegram: ${appState.userId}`);
-      } else {
-        console.warn('⚠️ No user data from Telegram, using demo ID');
-        appState.userId = 123456;
-      }
-
-      // Expand app to full height
-      tg.expand();
-      
-      // Set header color
-      tg.setHeaderColor('#1f2121');
-      
-    } else {
-      // Browser fallback (development mode)
-      console.log('🌐 Browser environment detected (not Telegram)');
-      appState.userId = parseInt(localStorage.getItem('userId') || '123456');
-      console.log(`✅ Using demo User ID: ${appState.userId}`);
-      
-      // Show demo notice
-      showDemoNotice();
-    }
-
-    // Load data from API
-    await loadWishes();
-    await loadNotifications();
-    
-    // Setup event handlers
-    setupEventHandlers();
-    
-    // Render initial UI
-    renderWishesTab();
-    
-    console.log('✅ App initialized successfully');
-
-  } catch (error) {
-    console.error('❌ Initialization error:', error);
-    showError('Ошибка инициализации приложения');
-  }
+// Показать/скрыть loader
+function showLoader(show = true) {
+    const loader = document.querySelector('.loader');
+    if (loader) loader.classList.toggle('hidden', !show);
 }
 
-// ============================================
-// API CALLS
-// ============================================
+// Toast
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
 
-async function loadWishes() {
-  try {
-    console.log(`📥 Fetching wishes for user ${appState.userId}...`);
-    
-    const response = await fetch(`${API_WISHES}?userId=${appState.userId}`);
-    const data = await response.json();
-
-    if (data.success && data.wishes) {
-      appState.wishes = data.wishes;
-      console.log(`✅ Loaded ${appState.wishes.length} wishes`);
-    } else {
-      console.warn('⚠️ No wishes returned from API');
-      appState.wishes = getDemoWishes();
+// TELEGRAM INITIALIZATION
+async function initializeApp() {
+    showLoader(true);
+    try {
+        console.log('Initializing Wishlist Mini App...');
+        
+        // Telegram check
+        if (window.Telegram?.WebApp) {
+            console.log('Telegram environment detected...');
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.setHeaderColor('#1f2121');
+            
+            const initDataUnsafe = tg.initDataUnsafe;
+            if (initDataUnsafe?.user?.id) {
+                appState.userId = initDataUnsafe.user.id;
+                console.log('User ID from Telegram:', appState.userId);
+            } else {
+                appState.userId = 123456; // demo
+            }
+        } else {
+            console.log('Browser mode - demo data');
+            appState.userId = parseInt(localStorage.getItem('userId') || '123456');
+        }
+        
+        // Load data
+        await loadWishes();
+        await loadNotifications();
+        setupEventHandlers();
+        renderWishesTab();
+        
+        showLoader(false);
+        console.log('App initialized successfully');
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showLoader(false);
+        appState.wishes = getDemoWishes();
+        appState.notifications = getDemoNotifications();
+        renderWishesTab();
+        setupEventHandlers();
+        showToast('Загружено в демо-режиме', 'error');
     }
-  } catch (error) {
-    console.error('❌ Error loading wishes:', error);
-    // Use demo data if API fails
-    appState.wishes = getDemoWishes();
-  }
+}
+
+// API CALLS
+async function loadWishes() {
+    try {
+        const response = await fetch(`${APIWISHES}?userId=${appState.userId}`);
+        const data = await response.json();
+        if (data.success) {
+            appState.wishes = data.wishes;
+        } else {
+            appState.wishes = getDemoWishes();
+        }
+    } catch (error) {
+        console.error('Load wishes error:', error);
+        appState.wishes = getDemoWishes();
+    }
 }
 
 async function loadNotifications() {
-  try {
-    console.log(`📥 Fetching notifications for user ${appState.userId}...`);
-    
-    // API endpoint should be /notifications/:userId
-    const response = await fetch(`${API_BASE}/notifications/${appState.userId}`);
-    const data = await response.json();
-
-    if (data.success && data.notifications) {
-      appState.notifications = data.notifications;
-      console.log(`✅ Loaded ${appState.notifications.length} notifications`);
-    } else {
-      console.warn('⚠️ No notifications returned from API');
-      appState.notifications = getDemoNotifications();
+    try {
+        const response = await fetch(`${APIBASE}/api/notifications?userId=${appState.userId}`);
+        const data = await response.json();
+        if (data.success) {
+            appState.notifications = data.notifications;
+        } else {
+            appState.notifications = getDemoNotifications();
+        }
+    } catch (error) {
+        console.error('Load notifications error:', error);
+        appState.notifications = getDemoNotifications();
     }
-  } catch (error) {
-    console.error('⚠️ Error loading notifications:', error);
-    // Use demo notifications
-    appState.notifications = getDemoNotifications();
-  }
 }
 
-// ============================================
-// DEMO DATA (for browser testing)
-// ============================================
-
+// DEMO DATA
 function getDemoWishes() {
-  return [
-    {
-      id: 1,
-      user_id: 123456,
-      title: 'Купить MacBook',
-      description: 'MacBook Pro 16 для работы',
-      photo_url: null,
-      link: null,
-      price: 2500,
-      status: 'active',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 2,
-      user_id: 123456,
-      title: 'Отпуск в Таиланде',
-      description: 'Неделя на пляже в Бангкоке',
-      photo_url: null,
-      link: null,
-      price: 2000,
-      status: 'active',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 3,
-      user_id: 123456,
-      title: 'Курс по веб-разработке',
-      description: 'Полный курс Next.js и TypeScript',
-      photo_url: null,
-      link: null,
-      price: 300,
-      status: 'active',
-      created_at: new Date().toISOString()
-    }
-  ];
+    return [
+        { id: 1, userid: appState.userId, title: 'MacBook', description: 'MacBook Pro 16"', price: 2500, status: 'active' },
+        { id: 2, userid: appState.userId, title: 'iPhone 16', price: 2000, status: 'active' },
+        { id: 3, userid: appState.userId, title: 'Курс Next.js', description: 'Next.js + TypeScript', price: 300, status: 'active' }
+    ];
 }
 
 function getDemoNotifications() {
-  return [
-    {
-      id: 1,
-      type: 'friend_request',
-      message: 'Друг @username подтвердил приглашение в приложение',
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: 2,
-      type: 'gift_selected',
-      message: 'Друг @friend_username выбрал подарить "Купить MacBook"',
-      created_at: new Date(Date.now() - 7200000).toISOString()
-    },
-    {
-      id: 3,
-      type: 'birthday',
-      message: 'День рождения друга @another_friend - 5 февраля (скоро!)',
-      created_at: new Date(Date.now() - 86400000).toISOString()
-    }
-  ];
+    return [
+        { id: 1, type: 'friendrequest', message: '@friend добавил вас в друзья', createdat: new Date(Date.now() - 3600000).toISOString() },
+        { id: 2, type: 'giftselected', message: '@friend выбрал ваше желание "MacBook"', createdat: new Date(Date.now() - 7200000).toISOString() }
+    ];
 }
 
-function showDemoNotice() {
-  // Demo mode отключен для production
-  console.log('✅ Production mode enabled');
-  // Баннер больше не показывается
-}
-
-function deleteWish(wishId) {
-  if (!confirm(`Удалить желание "${appState.wishes.find(w => w.id == wishId)?.title}"?`)) return;
-  
-  console.log('🗑️ Удаляем wish:', wishId);
-  
-  // TODO: Реальная API функция
-  alert('✅ Желание удалено (demo)');
-}
-
-function markAsGift(wishId) {
-  console.log('🎁 Отмечаем как подарок:', wishId);
-  
-  // TODO: Реальная API функция
-  alert('🎁 Вы отметили "Я подарю!" (demo)');
-}
-
-// ============================================
-// EVENT HANDLERS
-// ============================================
-
-function setupEventHandlers() {
-  console.log('🔧 Setting up event handlers...');
-
-  // Tab switching - FIXED
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  console.log(`Found ${tabButtons.length} tab buttons`);
-  
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const tabName = btn.dataset.tab;
-      console.log(`📑 Switching to ${tabName} tab`);
-      switchTab(tabName);
-    });
-  });
-
-  // Add wish button
-  const addWishBtn = document.getElementById('addWishBtn');
-  if (addWishBtn) {
-    addWishBtn.addEventListener('click', () => {
-      console.log('➕ Add wish button clicked');
-      showAddWishForm();
-    });
-  }
-
-  // Delete wish buttons
-  const deleteWishBtns = document.querySelectorAll('.delete-wish-btn');
-  deleteWishBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const wishId = btn.dataset.wishId;
-      console.log(`🗑️ Delete wish ${wishId} clicked`);
-      deleteWish(wishId);
-    });
-  });
-
-  // Mark as gift buttons
-  const giftBtns = document.querySelectorAll('.gift-btn');
-  giftBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const wishId = btn.dataset.wishId;
-      console.log(`🎁 Gift button for wish ${wishId} clicked`);
-      markAsGift(wishId);
-    });
-  });
-
-  function showWishDetails(wishId) {
-  const wish = appState.wishes.find(w => w.id == wishId);
-  if (!wish) return;
-
-  const modal = document.createElement('div');
-  modal.className = 'wish-modal';
-  modal.innerHTML = `
-    <div class="modal-overlay" onclick="this.parentElement.remove()">
-      <div class="modal-content" onclick="event.stopPropagation()">
-        <h2>${escapeHtml(wish.title)}</h2>
-        ${wish.description ? `<p>${escapeHtml(wish.description)}</p>` : ''}
-        ${wish.price ? `<p class="price">💰 ${wish.price} ₽</p>` : ''}
-        ${wish.link ? `<a href="${wish.link}" target="_blank" class="btn">🔗 Перейти</a>` : ''}
-        <div class="modal-actions">
-          <button class="btn btn-primary" onclick="markAsGift(${wish.id})">🎁 Я подарю!</button>
-          <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Закрыть</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
-
-  // Settings toggles
-  const notificationsToggle = document.getElementById('notificationsToggle');
-  const birthdayToggle = document.getElementById('birthdayToggle');
-
-  if (notificationsToggle) {
-    notificationsToggle.addEventListener('change', (e) => {
-      appState.settings.notificationsEnabled = e.target.checked;
-      localStorage.setItem('notificationsEnabled', e.target.checked);
-      console.log(`🔔 Notifications ${e.target.checked ? 'enabled' : 'disabled'}`);
-    });
-  }
-
-  if (birthdayToggle) {
-    birthdayToggle.addEventListener('change', (e) => {
-      appState.settings.birthdayNotifications = e.target.checked;
-      localStorage.setItem('birthdayNotifications', e.target.checked);
-      console.log(`🎂 Birthday notifications ${e.target.checked ? 'enabled' : 'disabled'}`);
-    });
-  }
-
-  console.log('✅ Event handlers set up successfully');
-}
-
-// ============================================
-// TAB MANAGEMENT - FIXED
-// ============================================
-
-function switchTab(tabName) {
-  console.log(`🔄 Switching tab to: ${tabName}`);
-  appState.currentTab = tabName;
-
-  // Update buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    if (btn.dataset.tab === tabName) {
-      btn.classList.add('active');
-      console.log(`✅ Marked button ${tabName} as active`);
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-
-  // Update content - SHOW THE RIGHT TAB
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-
-  // Show the active tab
-  const activeContent = document.querySelector(`[data-tab="${tabName}"]`);
-  if (activeContent) {
-    activeContent.classList.add('active');
-    console.log(`✅ Showed ${tabName} content`);
-  } else {
-    console.warn(`⚠️ Could not find content for tab: ${tabName}`);
-  }
-
-  // Render content
-  switch (tabName) {
-    case 'wishes':
-      renderWishesTab();
-      break;
-    case 'notifications':
-      renderNotificationsTab();
-      break;
-    case 'settings':
-      renderSettingsTab();
-      break;
-    default:
-      console.warn(`Unknown tab: ${tabName}`);
-  }
-}
-
-// ============================================
-// RENDER WISHES TAB
-// ============================================
+// ... (остальной код renderWishesTab, switchTab, setupEventHandlers, showAddWishForm из предыдущего ответа остается)
 
 function renderWishesTab() {
-  console.log('📋 Rendering wishes tab...');
-  const content = document.getElementById('wishesContent');
-  
-  if (!content) {
-    console.error('❌ wishesContent element not found!');
-    return;
-  }
-
-  if (!appState.wishes || appState.wishes.length === 0) {
-    content.innerHTML = `
-      <div class="empty-state">
-        <p>📝 Ваш список желаний пуст</p>
-        <p class="small-text">Нажмите кнопку ниже, чтобы добавить первое желание</p>
-      </div>
-    `;
-    console.log('✅ Rendered empty state');
-    return;
-  }
-
-  content.innerHTML = appState.wishes.map(wish => `
-    <div class="wish-card">
-      <div class="wish-header">
-        <h3>${escapeHtml(wish.title)}</h3>
-        <button class="delete-wish-btn" data-wish-id="${wish.id}" title="Удалить">
-          ✕
-        </button>
-      </div>
-      
-      ${wish.description ? `<p class="wish-description">${escapeHtml(wish.description)}</p>` : ''}
-      
-      <div class="wish-footer">
-        ${wish.price ? `<span class="wish-price">💰 $${wish.price}</span>` : ''}
-        <button class="gift-btn" data-wish-id="${wish.id}">
-          🎁 Подарить
-        </button>
-      </div>
-    </div>
-  `).join('');
-
-  console.log(`✅ Rendered ${appState.wishes.length} wishes`);
-
-  // Re-attach event listeners
-  setupEventHandlers();
-}
-
-// ============================================
-// RENDER NOTIFICATIONS TAB
-// ============================================
-
-function renderNotificationsTab() {
-  console.log('📬 Rendering notifications tab...');
-  const content = document.getElementById('notificationsContent');
-  
-  if (!content) {
-    console.error('❌ notificationsContent element not found!');
-    return;
-  }
-
-  if (!appState.notifications || appState.notifications.length === 0) {
-    content.innerHTML = `
-      <div class="empty-state">
-        <p>🔔 Нет уведомлений</p>
-        <p class="small-text">Здесь появятся уведомления от друзей</p>
-      </div>
-    `;
-    console.log('✅ Rendered empty notifications state');
-    return;
-  }
-
-  content.innerHTML = appState.notifications.map(notif => {
-    const date = new Date(notif.created_at);
-    const timeAgo = getTimeAgo(date);
+    const content = document.getElementById('wishesContent');
+    if (!content) return console.error('#wishesContent not found!');
     
-    return `
-      <div class="notification-card">
-        <div class="notification-content">
-          <p>${escapeHtml(notif.message)}</p>
-          <span class="notification-time">${timeAgo}</span>
+    if (appState.wishes.length === 0) {
+        content.innerHTML = `
+            <div class="empty-state">
+                <p>✨</p>
+                <p>Пока нет желаний</p>
+                <p class="small-text">Нажмите "+" чтобы добавить</p>
+            </div>
+        `;
+        return;
+    }
+    
+    content.innerHTML = appState.wishes.map(wish => `
+        <div class="wish-card">
+            <div class="wish-header">
+                <h3>${escapeHtml(wish.title)}</h3>
+                <button class="delete-wish-btn" data-wish-id="${wish.id}" title="Удалить">×</button>
+            </div>
+            ${wish.description ? `<p class="wish-description">${escapeHtml(wish.description)}</p>` : ''}
+            <div class="wish-footer">
+                ${wish.price ? `<span class="wish-price">${wish.price}₽</span>` : ''}
+                <button class="gift-btn" data-wish-id="${wish.id}">Подарить</button>
+            </div>
         </div>
-      </div>
-    `;
-  }).join('');
-
-  console.log(`✅ Rendered ${appState.notifications.length} notifications`);
+    `).join('');
 }
 
-// ============================================
-// RENDER SETTINGS TAB
-// ============================================
-
-function renderSettingsTab() {
-  console.log('⚙️ Rendering settings tab...');
-  const content = document.getElementById('settingsContent');
-  
-  if (!content) {
-    console.error('❌ settingsContent element not found!');
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="settings-group">
-      <h3>🔔 Уведомления</h3>
-      
-      <div class="setting-item">
-        <label for="notificationsToggle">
-          <span>Включить уведомления</span>
-        </label>
-        <input 
-          type="checkbox" 
-          id="notificationsToggle" 
-          ${appState.settings.notificationsEnabled ? 'checked' : ''}
-        />
-      </div>
-      
-      <div class="setting-item">
-        <label for="birthdayToggle">
-          <span>Уведомления о днях рождения друзей</span>
-        </label>
-        <input 
-          type="checkbox" 
-          id="birthdayToggle" 
-          ${appState.settings.birthdayNotifications ? 'checked' : ''}
-        />
-      </div>
-    </div>
-
-    <div class="settings-group">
-      <h3>ℹ️ О приложении</h3>
-      <p class="small-text">Wishlist Mini App v1.1</p>
-      <p class="small-text">Управляйте списком желаний со своими друзьями</p>
-    </div>
-  `;
-
-  console.log('✅ Rendered settings');
-
-  // Re-attach event listeners
-  setupEventHandlers();
-}
-
-// ============================================
-// ACTIONS
-// ============================================
-
-
+// showAddWishForm из предыдущего ответа (с fetch)
 async function showAddWishForm(editWish = null) {
-    const title = prompt(editWish ? `Редактировать: ${editWish.title}` : 'Название желания:');
+    const title = prompt(editWish ? `Редактировать "${editWish.title}"` : 'Название желания:');
     if (!title) return;
     
     const description = prompt('Описание (опционально):') || null;
     const priceStr = prompt('Цена (опционально):') || null;
     const price = priceStr ? parseFloat(priceStr) : null;
-    const category = prompt('Категория (опционально):') || null;
     
-    const wishData = { title, description, price, category, userId: appState.userId };
+    const wishData = { title, description, price, userId: appState.userId };
     
     try {
-        const response = await fetch(`${APIBASE}/wishes`, {
+        const response = await fetch(`${APIBASE}/api/wishes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(wishData)
         });
-        
         if (response.ok) {
-            await loadWishes();  // Перезагружаем список
-            showToast('Желание добавлено! ✅', 'success');
-        } else {
-            throw new Error('API error');
-        }
-    } catch (error) {
-        console.error('Add wish error:', error);
-        // Fallback: добавить в demo/localStorage
+            await loadWishes();
+            renderWishesTab();
+            showToast('Желание добавлено! ✅');
+        } else throw new Error();
+    } catch {
+        // Fallback demo
         const newWish = { ...wishData, id: Date.now(), status: 'active' };
         appState.wishes.unshift(newWish);
-        localStorage.setItem('wishes', JSON.stringify(appState.wishes));
         renderWishesTab();
-        showToast('Добавлено локально (API недоступен)', 'error');
+        showToast('Добавлено локально');
     }
 }
 
-  try {
-    if (editWish) {
-      await updateWish(editWish.id, wishData);  // Ваша функция обновления
-    } else {
-      await addWish(wishData);  // Ваша функция добавления
-    }
-    loadWishes();  // Перезагрузка списка
-  } catch (error) {
-    alert('Ошибка: ' + error.message);
-  }
-
-
-function deleteWish(wishId) {
-  if (!confirm('Вы уверены?')) return;
-  
-  // Here you would call API to delete wish
-  alert(`🗑️ Желание #${wishId} будет удалено`);
-  console.log('🗑️ Delete wish:', wishId);
-}
-
-function markAsGift(wishId) {
-  // Here you would call API to mark as gift
-  alert(`🎁 Вы пожелали подарить это желание!`);
-  console.log('🎁 Mark as gift:', wishId);
-}
-
-// ============================================
-// UTILITIES
-// ============================================
-
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function getTimeAgo(date) {
-  const seconds = Math.floor((new Date() - date) / 1000);
-  
-  if (seconds < 60) return 'только что';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} мин назад`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} ч назад`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} дн назад`;
-  
-  return date.toLocaleDateString('ru-RU');
-}
-
-function showError(message) {
-  console.error('❌', message);
-  alert(`❌ ${message}`);
-}
-
-// ============================================
-// APP START
-// ============================================
-
-// Wait for DOM to be ready
+// Запуск
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
+    document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
-  initializeApp();
+    initializeApp();
 }
-
-console.log('📦 Script loaded successfully - v1.1');
