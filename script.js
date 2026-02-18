@@ -504,21 +504,41 @@ function renderSettingsTab() {
 // ACTIONS
 // ============================================
 
+
 async function showAddWishForm(editWish = null) {
-  const title = prompt(editWish ? `Редактировать "${editWish.title}":` : 'Название желания:');
-  if (!title) return;
-
-  const description = prompt('Описание (опционально):') || null;
-  const priceStr = prompt('Цена (опционально):') || null;
-  const price = priceStr ? parseFloat(priceStr) : null;
-  const category = prompt('Категория (опционально):') || null;
-
-  const wishData = {
-    title,
-    description,
-    price,
-    category
-  };
+    const title = prompt(editWish ? `Редактировать: ${editWish.title}` : 'Название желания:');
+    if (!title) return;
+    
+    const description = prompt('Описание (опционально):') || null;
+    const priceStr = prompt('Цена (опционально):') || null;
+    const price = priceStr ? parseFloat(priceStr) : null;
+    const category = prompt('Категория (опционально):') || null;
+    
+    const wishData = { title, description, price, category, userId: appState.userId };
+    
+    try {
+        const response = await fetch(`${APIBASE}/wishes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(wishData)
+        });
+        
+        if (response.ok) {
+            await loadWishes();  // Перезагружаем список
+            showToast('Желание добавлено! ✅', 'success');
+        } else {
+            throw new Error('API error');
+        }
+    } catch (error) {
+        console.error('Add wish error:', error);
+        // Fallback: добавить в demo/localStorage
+        const newWish = { ...wishData, id: Date.now(), status: 'active' };
+        appState.wishes.unshift(newWish);
+        localStorage.setItem('wishes', JSON.stringify(appState.wishes));
+        renderWishesTab();
+        showToast('Добавлено локально (API недоступен)', 'error');
+    }
+}
 
   try {
     if (editWish) {
@@ -530,7 +550,7 @@ async function showAddWishForm(editWish = null) {
   } catch (error) {
     alert('Ошибка: ' + error.message);
   }
-}
+
 
 function deleteWish(wishId) {
   if (!confirm('Вы уверены?')) return;
